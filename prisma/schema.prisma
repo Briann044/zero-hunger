@@ -1,0 +1,309 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  firstName String?
+  lastName  String?
+  email     String   @unique
+  phone     String?
+  password  String?
+  role      Role     @default(USER)
+  verified  Boolean  @default(false)
+  status    UserStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  lastLogin DateTime?
+
+  // Relations
+  donations             Donation[]
+  foodDonations         FoodDonation[]
+  serviceDonations      ServiceDonation[]
+  volunteerApplications VolunteerApplication[]
+  partners              Partner[]
+  projects              Project[] // If NGO creates projects
+  verificationRequests  VerificationRequest[]
+  contentReports        ContentReport[] @relation("ReportsByUser")
+
+  // Optional metrics
+  totalDonations   Float? 
+  projectsCreated  Int?
+  foodListings     Int?
+}
+
+model Project {
+  id              String         @id @default(cuid())
+  title           String
+  description     String
+  shortDescription String
+  ngoId           String
+  ngoName         String
+  targetAmount    Float
+  raisedAmount    Float          @default(0)
+  goalMeals       Int
+  providedMeals   Int            @default(0)
+  status          ProjectStatus
+  category        String
+  location        String
+  imageUrl        String
+  createdAt       DateTime       @default(now())
+  endDate         DateTime
+  verified        Boolean        @default(false)
+
+  // Relations
+  donations       Donation[]
+  createdBy       User?          @relation(fields: [createdById], references: [id])
+  createdById     String?
+}
+
+model Donation {
+  id          String             @id @default(cuid())
+  donorId     String
+  donor       User               @relation(fields: [donorId], references: [id])
+  projectId   String
+  project     Project            @relation(fields: [projectId], references: [id])
+  type        DonationType
+  paymentMethod  String? 
+  amount      Float?             // For monetary donations
+  frequency   DonationFrequency?
+  description String
+  status      DonationStatus     @default(PENDING)
+  createdAt   DateTime           @default(now())
+  receiptUrl  String?
+}
+
+model FoodDonation {
+  id            String        @id @default(cuid())
+  providerId    String
+  provider      User          @relation(fields: [providerId], references: [id])
+  title         String
+  description   String
+  category      FoodCategory
+  quantity      Int
+  unit          String
+  expiryDate    DateTime
+  pickupLocation String
+  pickupTimeStart DateTime
+  pickupTimeEnd DateTime
+  status        FoodDonationStatus @default(AVAILABLE)
+  imageUrl      String?
+  createdAt     DateTime       @default(now())
+}
+
+model ServiceDonation {
+  id            String        @id @default(cuid())
+  donorId       String
+  donor         User          @relation(fields: [donorId], references: [id])
+  title         String
+  description   String
+  skills        String[]
+  hoursAvailable Int
+  location      String
+  availability  String
+  status        ServiceDonationStatus @default(AVAILABLE)
+  createdAt     DateTime       @default(now())
+}
+
+model VolunteerApplication {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  message   String
+  status    ApplicationStatus @default(PENDING)
+  createdAt DateTime @default(now())
+}
+
+model Partner {
+  id           String   @id @default(cuid())
+  name         String
+  email        String
+  organization String
+  user         User?    @relation(fields: [userId], references: [id])
+  userId       String?
+  createdAt    DateTime @default(now())
+}
+
+model VerificationRequest {
+  id              String   @id @default(cuid())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+  userType        VerificationUserType
+  organizationName String
+  email           String
+  documents       String[]
+  submittedAt     DateTime @default(now())
+  status          VerificationStatus @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  notes           String?
+}
+
+model ContentReport {
+  id          String   @id @default(cuid())
+  reportedBy  User     @relation("ReportsByUser", fields: [reportedById], references: [id])
+  reportedById String
+  contentType ContentType
+  contentId   String
+  reason      String
+  description String
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  resolvedBy  String?
+  resolvedAt  DateTime?
+}
+
+// Impact + analytics models stay same
+model ImpactMetric {
+  id                  String   @id @default(cuid())
+  totalMealsProvided  Int
+  totalDonations      Float
+  totalBeneficiaries  Int
+  totalProjects       Int
+  foodWastePrevented  Float    // in kg
+  co2EmissionsSaved   Float    // in kg
+  communitiesReached  Int
+  volunteersEngaged   Int
+  createdAt           DateTime @default(now())
+}
+
+model MonthlyImpact {
+  id             String   @id @default(cuid())
+  month          String
+  meals          Int
+  donations      Float
+  beneficiaries  Int
+  projects       Int
+  donorImpactId  String?
+  donorImpact    DonorImpactSummary? @relation(fields: [donorImpactId], references: [id])
+}
+
+model ProjectImpact {
+  id                    String   @id @default(cuid())
+  projectName           String
+  totalRaised           Float
+  mealsProvided         Int
+  beneficiariesReached  Int
+  completionPercentage  Int
+  impactStories         ImpactStory[]
+  donorImpactId         String?
+  donorImpact           DonorImpactSummary? @relation(fields: [donorImpactId], references: [id])
+}
+
+model ImpactStory {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  imageUrl        String?
+  location        String
+  beneficiaryName String?
+  date            DateTime
+  mealsProvided   Int
+  projectImpactId String
+  projectImpact   ProjectImpact @relation(fields: [projectImpactId], references: [id])
+}
+
+model DonorImpactSummary {
+  id                String           @id @default(cuid())
+  donorId           String
+  totalDonated      Float
+  totalMealsProvided Int
+  projectsSupported Int
+  impactRank        Int
+  monthlyImpact     MonthlyImpact[]
+  topProjects       ProjectImpact[]
+}
+
+/* ---------------- ENUMS ---------------- */
+
+enum Role {
+  USER
+  DONOR
+  NGO
+  FOOD_PROVIDER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VerificationUserType {
+  NGO
+  FOOD_PROVIDER
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ContentType {
+  PROJECT
+  COMMENT
+  PROFILE
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+// New enums from types.ts
+enum DonationType {
+  MONETARY
+  FOOD
+  SERVICE
+}
+
+enum DonationFrequency {
+  ONE_TIME
+  MONTHLY
+  WEEKLY
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  DRAFT
+}
+
+enum FoodCategory {
+  FRESH_PRODUCE
+  PACKAGED_FOOD
+  PREPARED_MEALS
+  BEVERAGES
+}
+
+enum DonationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum FoodDonationStatus {
+  AVAILABLE
+  CLAIMED
+  COMPLETED
+}
+
+enum ServiceDonationStatus {
+  AVAILABLE
+  MATCHED
+  COMPLETED
+}
