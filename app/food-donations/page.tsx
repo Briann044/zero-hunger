@@ -1,11 +1,47 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Heart, MapPin, Clock, Package, Calendar } from "lucide-react"
-import { mockFoodDonations } from "@/lib/mock-data"
 import Link from "next/link"
 
+interface FoodDonation {
+  id: string
+  title: string
+  description: string
+  category: string
+  imageUrl?: string
+  quantity: number
+  unit: string
+  expiryDate: string
+  pickupLocation: string
+  pickupTimeStart: string
+  pickupTimeEnd: string
+}
+
 export default function FoodDonationsPage() {
+  const [foodDonations, setFoodDonations] = useState<FoodDonation[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchFoodDonations() {
+      try {
+        const res = await fetch("/api/food-donations")
+        if (!res.ok) throw new Error("Failed to fetch food donations")
+        const data = await res.json()
+        setFoodDonations(data.foodDonations || [])
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFoodDonations()
+  }, [])
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "fresh-produce":
@@ -93,80 +129,79 @@ export default function FoodDonationsPage() {
         <div className="container mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold text-foreground">Available Food</h2>
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="text-sm">
-                {mockFoodDonations.length} Available Listings
-              </Badge>
+          </div>
+
+          {loading ? (
+            <p>Loading food donations...</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {foodDonations.map((food) => (
+                <Card key={food.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  {food.imageUrl && (
+                    <div className="aspect-video relative overflow-hidden">
+                      <img
+                        src={food.imageUrl || "/placeholder.svg"}
+                        alt={food.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-4 left-4">
+                        <Badge className={getCategoryColor(food.category)}>
+                          {getCategoryIcon(food.category)} {food.category.replace("-", " ")}
+                        </Badge>
+                      </div>
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-green-600 text-white">Available</Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  <CardHeader>
+                    <CardTitle className="text-xl text-balance">{food.title}</CardTitle>
+                    <CardDescription className="text-pretty">{food.description}</CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">
+                          {food.quantity} {food.unit}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Expires {new Date(food.expiryDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>{food.pickupLocation}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          Pickup: {food.pickupTimeStart} - {food.pickupTimeEnd}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button className="flex-1" asChild>
+                        <Link href={`/food-donations/${food.id}/claim`}>Claim Food</Link>
+                      </Button>
+                      <Button variant="outline" asChild>
+                        <Link href={`/food-donations/${food.id}`}>Details</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockFoodDonations.map((food) => (
-              <Card key={food.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                {food.imageUrl && (
-                  <div className="aspect-video relative overflow-hidden">
-                    <img
-                      src={food.imageUrl || "/placeholder.svg"}
-                      alt={food.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <Badge className={getCategoryColor(food.category)}>
-                        {getCategoryIcon(food.category)} {food.category.replace("-", " ")}
-                      </Badge>
-                    </div>
-                    <div className="absolute top-4 right-4">
-                      <Badge className="bg-green-600 text-white">Available</Badge>
-                    </div>
-                  </div>
-                )}
-
-                <CardHeader>
-                  <CardTitle className="text-xl text-balance">{food.title}</CardTitle>
-                  <CardDescription className="text-pretty">{food.description}</CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {food.quantity} {food.unit}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Expires {new Date(food.expiryDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{food.pickupLocation}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        Pickup: {food.pickupTimeStart} - {food.pickupTimeEnd}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button className="flex-1" asChild>
-                      <Link href={`/food-donations/${food.id}/claim`}>Claim Food</Link>
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <Link href={`/food-donations/${food.id}`}>Details</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          )}
         </div>
       </section>
 

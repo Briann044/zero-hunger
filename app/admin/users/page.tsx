@@ -1,3 +1,6 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,73 +10,53 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Heart, Search, Users, AlertTriangle, CheckCircle, Ban, Eye } from "lucide-react"
 import Link from "next/link"
 
-// This would be fetched from the API in a real implementation
-const mockUserData = {
-  users: [
-    {
-      id: "1",
-      email: "john.donor@example.com",
-      firstName: "John",
-      lastName: "Smith",
-      role: "donor",
-      status: "active",
-      verified: true,
-      createdAt: "2024-01-15T00:00:00Z",
-      lastLogin: "2024-01-22T10:30:00Z",
-      totalDonations: 1250,
-    },
-    {
-      id: "2",
-      email: "hope.foundation@example.com",
-      firstName: "Hope",
-      lastName: "Foundation",
-      role: "ngo",
-      status: "active",
-      verified: true,
-      createdAt: "2024-01-10T00:00:00Z",
-      lastLogin: "2024-01-22T09:15:00Z",
-      projectsCreated: 3,
-    },
-    {
-      id: "3",
-      email: "fresh.market@example.com",
-      firstName: "Fresh",
-      lastName: "Market Co",
-      role: "food-provider",
-      status: "active",
-      verified: true,
-      createdAt: "2024-01-12T00:00:00Z",
-      lastLogin: "2024-01-21T16:45:00Z",
-      foodListings: 15,
-    },
-    {
-      id: "4",
-      email: "suspicious.user@example.com",
-      firstName: "Suspicious",
-      lastName: "User",
-      role: "donor",
-      status: "suspended",
-      verified: false,
-      createdAt: "2024-01-20T00:00:00Z",
-      lastLogin: "2024-01-20T12:00:00Z",
-      totalDonations: 0,
-    },
-  ],
-  summary: {
-    total: 1250,
-    active: 1200,
-    suspended: 45,
-    pending: 5,
-    byRole: {
-      donor: 1200,
-      ngo: 12,
-      "food-provider": 8,
-      admin: 30,
-    },
-  },
+interface User {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  status: string
+  verified: boolean
+  createdAt: string
+  lastLogin: string
+  totalDonations?: number
+  projectsCreated?: number
+  foodListings?: number
+}
+
+interface UserSummary {
+  total: number
+  active: number
+  suspended: number
+  pending: number
+  byRole: Record<string, number>
 }
 
 export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>([])
+  const [summary, setSummary] = useState<UserSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const res = await fetch("/api/admin/users")
+        if (!res.ok) throw new Error("Failed to fetch users")
+        const data = await res.json()
+        setUsers(data.users || [])
+        setSummary(data.summary || null)
+      } catch (err) {
+        console.error(err)
+        setError("Failed to load users")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUsers()
+  }, [])
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -138,51 +121,57 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{mockUserData.summary.total.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Platform users</p>
-            </CardContent>
-          </Card>
+        {loading ? (
+          <p className="text-center py-8 text-muted-foreground">Loading summary...</p>
+        ) : error ? (
+          <p className="text-center py-8 text-red-600">{error}</p>
+        ) : summary ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{summary.total.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">Platform users</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{mockUserData.summary.active.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Currently active</p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{summary.active.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">Currently active</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Suspended</CardTitle>
-              <Ban className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{mockUserData.summary.suspended}</div>
-              <p className="text-xs text-muted-foreground">Suspended accounts</p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Suspended</CardTitle>
+                <Ban className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{summary.suspended}</div>
+                <p className="text-xs text-muted-foreground">Suspended accounts</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{mockUserData.summary.pending}</div>
-              <p className="text-xs text-muted-foreground">Awaiting verification</p>
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">{summary.pending}</div>
+                <p className="text-xs text-muted-foreground">Awaiting verification</p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
 
         {/* Filters and Search */}
         <Card className="mb-6">
@@ -225,80 +214,86 @@ export default function AdminUsersPage() {
         </Card>
 
         {/* Users Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Platform Users</CardTitle>
-            <CardDescription>Manage user accounts and permissions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Activity</TableHead>
-                  <TableHead>Last Login</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockUserData.users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {user.role === "donor" && user.totalDonations && <span>${user.totalDonations} donated</span>}
-                        {user.role === "ngo" && user.projectsCreated && <span>{user.projectsCreated} projects</span>}
-                        {user.role === "food-provider" && user.foodListings && (
-                          <span>{user.foodListings} listings</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(user.lastLogin).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {user.status === "active" ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 bg-transparent"
-                          >
-                            <Ban className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-green-600 hover:text-green-700 bg-transparent"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+        {loading ? (
+          <p className="text-center py-8 text-muted-foreground">Loading users...</p>
+        ) : error ? (
+          <p className="text-center py-8 text-red-600">{error}</p>
+        ) : users.length === 0 ? (
+          <p className="text-center py-8 text-muted-foreground">No users found.</p>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Users</CardTitle>
+              <CardDescription>Manage user accounts and permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Activity</TableHead>
+                    <TableHead>Last Login</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium">
+                            {user.firstName} {user.lastName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>{getStatusBadge(user.status)}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {user.role === "donor" && user.totalDonations && <span>${user.totalDonations} donated</span>}
+                          {user.role === "ngo" && user.projectsCreated && <span>{user.projectsCreated} projects</span>}
+                          {user.role === "food-provider" && user.foodListings && <span>{user.foodListings} listings</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(user.lastLogin).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {user.status === "active" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 bg-transparent"
+                            >
+                              <Ban className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 hover:text-green-700 bg-transparent"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

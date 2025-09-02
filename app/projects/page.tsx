@@ -1,12 +1,49 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Heart, MapPin, Calendar, Users } from "lucide-react"
-import { mockProjects } from "@/lib/mock-data"
 import Link from "next/link"
 
+interface Project {
+  id: string
+  title: string
+  shortDescription: string
+  category: string
+  imageUrl?: string
+  verified: boolean
+  ngoName: string
+  location: string
+  raisedAmount: number
+  targetAmount: number
+  providedMeals: number
+  endDate: string
+}
+
 export default function ProjectsPage() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const res = await fetch("/api/projects")
+        if (!res.ok) throw new Error("Failed to fetch projects")
+        const data = await res.json()
+        setProjects(data.projects || [])
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -66,82 +103,86 @@ export default function ProjectsPage() {
             <h2 className="text-3xl font-bold text-foreground">Featured Projects</h2>
             <div className="flex items-center gap-4">
               <Badge variant="secondary" className="text-sm">
-                {mockProjects.length} Active Projects
+                {projects.length} Active Projects
               </Badge>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {mockProjects.map((project) => (
-              <Card key={project.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="aspect-video relative overflow-hidden">
-                  <img
-                    src={project.imageUrl || "/placeholder.svg"}
-                    alt={project.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <Badge className="bg-primary text-primary-foreground">{project.category}</Badge>
-                  </div>
-                  {project.verified && (
-                    <div className="absolute top-4 right-4">
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        ✓ Verified
-                      </Badge>
+          {loading ? (
+            <p>Loading projects...</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {projects.map((project) => (
+                <Card key={project.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="aspect-video relative overflow-hidden">
+                    <img
+                      src={project.imageUrl || "/placeholder.svg"}
+                      alt={project.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-primary text-primary-foreground">{project.category}</Badge>
                     </div>
-                  )}
-                </div>
-
-                <CardHeader>
-                  <CardTitle className="text-xl text-balance">{project.title}</CardTitle>
-                  <CardDescription className="text-pretty">{project.shortDescription}</CardDescription>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{project.ngoName}</span>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">
-                        ${project.raisedAmount.toLocaleString()} / ${project.targetAmount.toLocaleString()}
-                      </span>
-                    </div>
-                    <Progress value={(project.raisedAmount / project.targetAmount) * 100} className="h-2" />
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{Math.round((project.raisedAmount / project.targetAmount) * 100)}% funded</span>
-                      <span>{project.providedMeals.toLocaleString()} meals provided</span>
-                    </div>
+                    {project.verified && (
+                      <div className="absolute top-4 right-4">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          ✓ Verified
+                        </Badge>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{project.location}</span>
+                  <CardHeader>
+                    <CardTitle className="text-xl text-balance">{project.title}</CardTitle>
+                    <CardDescription className="text-pretty">{project.shortDescription}</CardDescription>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{project.ngoName}</span>
                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>Ends {new Date(project.endDate).toLocaleDateString()}</span>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-medium">
+                          ${project.raisedAmount.toLocaleString()} / ${project.targetAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      <Progress value={(project.raisedAmount / project.targetAmount) * 100} className="h-2" />
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{Math.round((project.raisedAmount / project.targetAmount) * 100)}% funded</span>
+                        <span>{project.providedMeals.toLocaleString()} meals provided</span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <Button className="flex-1" asChild>
-                      <Link href={`/projects/${project.id}/donate`}>Donate Now</Link>
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <Link href={`/projects/${project.id}`}>Learn More</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4" />
+                        <span>{project.location}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>Ends {new Date(project.endDate).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button className="flex-1" asChild>
+                        <Link href={`/projects/${project.id}/donate`}>Donate Now</Link>
+                      </Button>
+                      <Button variant="outline" asChild>
+                        <Link href={`/projects/${project.id}`}>Learn More</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

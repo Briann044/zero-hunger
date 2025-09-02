@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Heart, DollarSign, Users, TrendingUp, MapPin, Calendar, Plus, Edit } from "lucide-react"
-import { mockProjects } from "@/lib/mock-data"
 import Link from "next/link"
 
 // Mock NGO data

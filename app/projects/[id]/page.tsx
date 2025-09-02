@@ -1,10 +1,12 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Heart, MapPin, Calendar, Target, Users, CheckCircle, DollarSign } from "lucide-react"
-import { mockProjects } from "@/lib/mock-data"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -14,12 +16,52 @@ interface ProjectPageProps {
   }
 }
 
-export default function ProjectPage({ params }: ProjectPageProps) {
-  const project = mockProjects.find((p) => p.id === params.id)
+interface Project {
+  id: string
+  title: string
+  description: string
+  shortDescription: string
+  category: string
+  imageUrl?: string
+  verified: boolean
+  ngoName: string
+  location: string
+  raisedAmount: number
+  targetAmount: number
+  providedMeals: number
+  goalMeals: number
+  endDate: string
+}
 
-  if (!project) {
-    notFound()
-  }
+export default function ProjectPage({ params }: ProjectPageProps) {
+  const [project, setProject] = useState<Project | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    async function fetchProject() {
+      try {
+        const res = await fetch(`/api/projects/${params.id}`)
+        if (!res.ok) throw new Error("Project not found")
+        const data = await res.json()
+        if (!data.project) {
+          setError(true)
+        } else {
+          setProject(data.project)
+        }
+      } catch (err) {
+        console.error(err)
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProject()
+  }, [params.id])
+
+  if (loading) return <p className="text-center py-16">Loading project...</p>
+  if (error || !project) notFound()
 
   const progressPercentage = (project.raisedAmount / project.targetAmount) * 100
   const mealsPercentage = (project.providedMeals / project.goalMeals) * 100
