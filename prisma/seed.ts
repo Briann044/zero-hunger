@@ -1,18 +1,30 @@
 // prisma/seed.ts
 import { PrismaClient, Role, UserStatus, VerificationStatus, VerificationUserType, ContentType } from "@prisma/client"
+import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
+
+async function hashPassword(password: string) {
+  const salt = await bcrypt.genSalt(10)
+  return bcrypt.hash(password, salt)
+}
 
 async function main() {
   console.log("🌱 Starting seed...")
 
   // --- Users ---
+  const adminPassword = await hashPassword("admin123")
+  const ngoPassword = await hashPassword("ngo12345")
+  const donorPassword = await hashPassword("donor12345")
+  const suspiciousPassword = await hashPassword("suspicious123")
+
   const admin = await prisma.user.upsert({
     where: { email: "brian@zerohunger.org" },
     update: {},
     create: {
       id: "1",
       email: "brian@zerohunger.org",
+      password: adminPassword,
       firstName: "Brian",
       lastName: "Wambugu",
       phone: "+254114788563",
@@ -30,6 +42,7 @@ async function main() {
     create: {
       id: "2",
       email: "hope.foundation@gmail.com",
+      password: ngoPassword,
       firstName: "Hope",
       lastName: "Foundation",
       phone: "+1234567891",
@@ -48,6 +61,7 @@ async function main() {
     create: {
       id: "3",
       email: "fresh.market@store.ke",
+      password: donorPassword,
       firstName: "Fresh",
       lastName: "Market",
       phone: "+1234567892",
@@ -66,6 +80,7 @@ async function main() {
     create: {
       id: "4",
       email: "suspicious.user@example.com",
+      password: suspiciousPassword,
       firstName: "Suspicious",
       lastName: "User",
       phone: "+1234567893",

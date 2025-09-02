@@ -198,7 +198,7 @@ export default function ProjectsPage() {
               <Link href="/auth/register">Join as Donor</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/register">Register NGO</Link>
+              <Link href="ngo/register">Register NGO</Link>
             </Button>
           </div>
         </div>

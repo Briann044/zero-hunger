@@ -1,6 +1,7 @@
 // lib/auth.ts
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
+import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 
 const secret = new TextEncoder().encode(
@@ -60,6 +61,17 @@ export async function getUser() {
   return user;
 }
 
+export async function hashPassword(password: string) {
+  const saltRounds = 10
+  const hashed = await bcrypt.hash(password, saltRounds)
+  return hashed
+}
+
+// Optionally: verify password
+export async function verifyPassword(password: string, hash: string) {
+  return await bcrypt.compare(password, hash)
+}
+
 export async function setAuthCookie(token: string) {
   const cookieStore = await cookies();
   cookieStore.set("auth-token", token, {
@@ -75,3 +87,4 @@ export async function removeAuthCookie() {
   const cookieStore = await cookies();
   cookieStore.delete("auth-token");
 }
+
