@@ -1,14 +1,19 @@
 // src/app/api/food-donations/route.ts
 import { type NextRequest, NextResponse } from "next/server"
 import { getUser } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { Role } from "@prisma/client"
+import prisma from "@/lib/prisma"
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getUser()
-    if (!user || user.role !== "FOOD-PROVIDER") {
-      return NextResponse.json({ error: "Food provider authentication required" }, { status: 401 })
-    }
+    if (!user || user.role !== Role.FOOD_PROVIDER) {
+  return NextResponse.json(
+    { error: "Food provider authentication required" },
+    { status: 401 }
+  )
+}
+    
 
     const {
       title,
@@ -22,6 +27,7 @@ export async function POST(request: NextRequest) {
       pickupTimeEnd,
     } = await request.json()
 
+    // Validate required fields
     if (
       !title ||
       !description ||
@@ -36,19 +42,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 })
     }
 
-    // Save to DB
+    const parsedQuantity = Number(quantity)
+    if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+      return NextResponse.json({ error: "Quantity must be a positive number" }, { status: 400 })
+    }
+
     const foodDonation = await prisma.foodDonation.create({
       data: {
         providerId: user.id,
         title,
         description,
         category,
-        quantity: Number(quantity),
+        quantity: parsedQuantity,
         unit,
         expiryDate: new Date(expiryDate),
         pickupLocation,
-        pickupTimeStart,
-        pickupTimeEnd,
+        pickupTimeStart: new Date(pickupTimeStart),
+        pickupTimeEnd: new Date(pickupTimeEnd),
         status: "AVAILABLE",
       },
     })
@@ -68,6 +78,7 @@ export async function GET() {
   try {
     const foodDonations = await prisma.foodDonation.findMany({
       orderBy: { createdAt: "desc" },
+      include: { provider: { select: { id: true, firstName: true } } },
     })
 
     return NextResponse.json({

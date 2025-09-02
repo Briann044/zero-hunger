@@ -87,7 +87,7 @@ export default function ProjectsPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
-              <Link href="#projects">Browse Projects</Link>
+              <Link href="">Browse Projects</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <Link href="/create-project">Start a Project</Link>
@@ -198,7 +198,7 @@ export default function ProjectsPage() {
               <Link href="/auth/register">Join as Donor</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/ngo/register">Register NGO</Link>
+              <Link href="/register">Register NGO</Link>
             </Button>
           </div>
         </div>
