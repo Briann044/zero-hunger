@@ -1,85 +1,57 @@
-// import { NextResponse } from "next/server"
-// import type { NextRequest } from "next/server"
-// import { verifyToken } from "@/lib/auth"
+// middleware.ts
+import { NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import type { NextRequest } from 'next/server';
 
-// // Define protected routes and their required roles
-// const protectedRoutes = {
-//   "/dashboard": ["donor", "ngo", "food-provider"],
-//   "/admin": ["admin"],
-//   "/donate": ["donor"],
-//   "/ngo": ["ngo"],
-//   "/food-provider": ["food-provider"],
-// }
+const adminRoutes = ['/admin'];
+const ngoRoutes = ['/ngo'];
+const foodProviderRoutes = ['/food-provider'];
+const userRoutes = ['/'];
 
-// const publicRoutes = [
-//   "/",
-//   "/auth/login",
-//   "/auth/register",
-//   "/auth/forgot-password",
-//   "/about",
-//   "/contact",
-//   "/api/auth/login",
-//   "/api/auth/register",
-//   "/api/auth/logout",
-// ]
+export async function middleware(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const { pathname } = req.nextUrl;
 
-// export async function middleware(request: NextRequest) {
-//   const { pathname } = request.nextUrl
+  // All protected routes
+  const isProtectedRoute = [
+    ...adminRoutes,
+    ...ngoRoutes,
+    ...foodProviderRoutes,
+    ...userRoutes,
+  ].some((route) => pathname.startsWith(route));
 
-//   // Allow public routes
-//   if (publicRoutes.some((route) => pathname.startsWith(route))) {
-//     return NextResponse.next()
-//   }
+  if (!token && isProtectedRoute) {
+    return NextResponse.redirect(new URL('/auth/signin', req.url));
+  }
 
-//   // Get auth token from cookies
-//   const token = request.cookies.get("auth-token")?.value
+  // Role-based access
+  if (pathname.startsWith('/admin') && token?.role !== 'ADMIN') {
+    return NextResponse.redirect(new URL('/unauthorized', req.url));
+  }
 
-//   if (!token) {
-//     // Redirect to login if no token
-//     return NextResponse.redirect(new URL("/auth/login", request.url))
-//   }
+  if (pathname.startsWith('/ngo') && token?.role !== 'NGO') {
+    return NextResponse.redirect(new URL('/unauthorized', req.url));
+  }
 
-//   // Verify token
-//   const payload = await verifyToken(token)
-//   if (!payload) {
-//     // Invalid token, redirect to login
-//     const response = NextResponse.redirect(new URL("/auth/login", request.url))
-//     response.cookies.delete("auth-token")
-//     return response
-//   }
+  if (pathname.startsWith('/food-provider') && token?.role !== 'FOOD_PROVIDER') {
+    return NextResponse.redirect(new URL('/unauthorized', req.url));
+  }
 
-//   // Check role-based access
-//   for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
-//     if (pathname.startsWith(route)) {
-//       if (!allowedRoles.includes(payload.role)) {
-//         // User doesn't have required role
-//         return NextResponse.redirect(new URL("/unauthorized", request.url))
-//       }
-//     }
-//   }
+  // Example redirect: admin should not access user dashboard
+  if (pathname.startsWith('/dashboard') && token?.role === 'ADMIN') {
+    return NextResponse.redirect(new URL('/admin', req.url));
+  }
 
-//   // Add user info to headers for server components
-//   const requestHeaders = new Headers(request.headers)
-//   requestHeaders.set("x-user-id", payload.userId)
-//   requestHeaders.set("x-user-role", payload.role)
-//   requestHeaders.set("x-user-email", payload.email)
+  return NextResponse.next();
+}
 
-//   return NextResponse.next({
-//     request: {
-//       headers: requestHeaders,
-//     },
-//   })
-// }
-
-// export const config = {
-//   matcher: [
-//     /*
-//      * Match all request paths except for the ones starting with:
-//      * - api (API routes)
-//      * - _next/static (static files)
-//      * - _next/image (image optimization files)
-//      * - favicon.ico (favicon file)
-//      */
-//     "/((?!api|_next/static|_next/image|favicon.ico).*)",
-//   ],
-// }
+export const config = {
+  matcher: [
+    '/admin/:path*',
+    '/ngo/:path*',
+    '/food-provider/:path*',
+    '/dashboard/:path*',
+    '/api/:path*',
+    '/', // root path
+  ],
+};
