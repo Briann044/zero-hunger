@@ -58,7 +58,7 @@ export default function NGORegisterPage() {
       }
 
       toast.success("Registration successful!")
-      router.push("/ngo/dashboard")
+      router.push("/auth/login")
     } catch (error) {
       console.error(error)
       toast.error("Something went wrong")
@@ -97,7 +97,7 @@ export default function NGORegisterPage() {
         </form>
 
         <p className="mt-4 text-sm text-muted-foreground text-center">
-          Already have an account? <a href="/ngo/login" className="text-primary">Login</a>
+          Already have an account? <a href="auth/login" className="text-primary">Login</a>
         </p>
       </div>
     </div>
