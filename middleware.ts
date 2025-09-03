@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
   ].some((route) => pathname.startsWith(route));
 
   if (!token && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/auth/signin', req.url));
+    return NextResponse.redirect(new URL('/auth/login', req.url));
   }
 
   // Role-based access
